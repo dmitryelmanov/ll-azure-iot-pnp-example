@@ -10,6 +10,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClimatePnPDevice", "ClimatePnPDevice\ClimatePnPDevice.csproj", "{F48A3E8D-3BCC-416B-B7FB-C937ADF70ADE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Models", "Models", "{BB679B73-81CC-47D0-9C03-815093C00B4F}"
+	ProjectSection(SolutionItems) = preProject
+		Models\deviceTwin.json = Models\deviceTwin.json
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "dtmi", "dtmi", "{BB208F83-530B-4FCF-866F-A49B63633A35}"
 EndProject

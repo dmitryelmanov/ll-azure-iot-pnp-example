@@ -1,0 +1,38 @@
+{
+    "properties": {
+        "desired": {
+            "temperature": {
+                "__t": "c",
+                "targetTemperatureRange": {
+                    "min": 0,
+                    "max": 40
+                }
+            },
+            "humidity": {
+                "__t": "c",
+                "targetHumidityRange": {
+                    "min": 0,
+                    "max": 100
+                }
+            },
+            "telemetryInterval": 3000
+        },
+        "reported": {
+            "temperature": {
+                "__t": "c",
+                "targetTemperatureRange": {
+                    "min": 0,
+                    "max": 40
+                }
+            },
+            "humidity": {
+                "__t": "c",
+                "targetHumidityRange": {
+                    "min": 0,
+                    "max": 100
+                }
+            },
+            "telemetryInterval": 3000
+        }
+    }
+}
