@@ -6,7 +6,7 @@ namespace AzureIoTDevice.Configuration;
 public class ProvisionAndConnectConfiguration
     : IDpsConfiguration
     , IDeviceConfiguration
-    , IGatewayConfiguration
+    , IEdgeConfiguration
     , IPlugAndPlayConfiguration
 {
     public string GlobalDeviceEndpoint { get; set; }
@@ -22,6 +22,10 @@ public class ProvisionAndConnectConfiguration
     /// Transport Type for connecting to IoT Hub
     /// </summary>
     public TransportType ConnectingTransportType { get; set; }
+    /// <summary>
+    /// [optional] Id of an Edge Gateway device the device is connected trough
+    /// </summary>
+    public string? EdgeDeviceId { get; set; }
     /// <summary>
     /// [optional] HostName of an Edge Gateway device the device is connected trough
     /// </summary>

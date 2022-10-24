@@ -48,7 +48,7 @@ public sealed class ClimateDevice
                 {
                     var ms = Convert.ToInt32(value);
                     TelemetryInterval = TimeSpan.FromMilliseconds(ms > 0 ? ms : TelemetryInterval.TotalMilliseconds);
-                    return Task.FromResult((dynamic)TelemetryInterval.TotalMilliseconds);
+                    return Task.FromResult<dynamic>((dynamic)TelemetryInterval.TotalMilliseconds);
                 }
             },
             {
@@ -56,7 +56,19 @@ public sealed class ClimateDevice
                 (value, cancellationToken) =>
                 {
                     _logger?.LogTrace($"temperature: {value}");
-                    return Task.FromResult(value);
+                    _temperatureSource.Min = Convert.ToDouble(value.targetTemperatureRange.min);
+                    _temperatureSource.Max = Convert.ToDouble(value.targetTemperatureRange.max);
+                    return Task.FromResult<dynamic>(value);
+                }
+            },
+            {
+                "humidity",
+                (value, cancellationToken) =>
+                {
+                    _logger?.LogTrace($"humidity: {value}");
+                    _humiditySource.Min = Convert.ToDouble(value.targetHumidityRange.min);
+                    _humiditySource.Max = Convert.ToDouble(value.targetHumidityRange.max);
+                    return Task.FromResult<dynamic>(value);
                 }
             }
         };
@@ -89,7 +101,7 @@ public sealed class ClimateDevice
                 Humidity = await _humiditySource.NextAsync(),
             };
             var json = JsonConvert.SerializeObject(telemetry);
-            await SendTelemetryAsync(json, cancellationToken);
+            await SendTelemetryAsync(json, cancellationToken: cancellationToken);
             await Task.Delay(TelemetryInterval, cts.Token);
         }
     }

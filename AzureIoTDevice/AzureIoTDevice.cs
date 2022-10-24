@@ -80,7 +80,10 @@ public abstract class AzureIoTDevice : IDisposable
 
     public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
-    protected async Task SendTelemetryAsync(string telemetry, CancellationToken cancellationToken = default)
+    protected async Task SendTelemetryAsync(
+        string telemetry,
+        IReadOnlyDictionary<string, string>? properties = null,
+        CancellationToken cancellationToken = default)
     {
         await _connectingTask;
 
@@ -88,6 +91,14 @@ public abstract class AzureIoTDevice : IDisposable
 
         _logger?.LogTrace($"Send telemetry: {telemetry}");
         var message = new Message(Encoding.UTF8.GetBytes(telemetry));
+        if (properties != null)
+        {
+            foreach (var prop in properties)
+            {
+                message.Properties.Add(prop.Key, prop.Value);
+            }
+        }
+
         await _deviceClient.SendEventAsync(message, cts.Token);
     }
 
@@ -146,7 +157,11 @@ public abstract class AzureIoTDevice : IDisposable
         string? provisioningPayload = null;
         if (!string.IsNullOrWhiteSpace(configuration.ModelId))
         {
-            provisioningPayload = $"{{\"modelId\" : \"{configuration.ModelId}\"}}";
+            provisioningPayload = JsonConvert.SerializeObject(new
+            {
+                modelId = configuration.ModelId,
+                edgeId = configuration.EdgeDeviceId,
+            });
         }
 
         _logger?.LogDebug("Provisioning device.");
