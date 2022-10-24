@@ -1,0 +1,39 @@
+{
+  "@context": "dtmi:dtdl:context;2",
+  "@id": "dtmi:com:example:ClimateDevice;1",
+  "@type": "Interface",
+  "displayName": "ClimateDevice",
+  "description": "Reports current temperature and humidity in provided ranges.",
+  "contents": [
+    {
+      "@type": "Component",
+      "name": "temperature",
+      "schema": "dtmi:com:example:TemperatureSensor;1"
+    },
+    {
+      "@type": "Component",
+      "name": "humidity",
+      "schema": "dtmi:com:example:HumiditySensor;1"
+    },
+    {
+      "@type": [
+        "Property",
+        "TimeSpan"
+      ],
+      "name": "telemetryInterval",
+      "schema": "integer",
+      "unit": "millisecond",
+      "displayName": "Telemetry Interval",
+      "description": "Interval for sending telemetry data.",
+      "writable": true
+    },
+    {
+      "@type": "Command",
+      "name": "reboot",
+      "request": {
+        "name": "delay",
+        "schema": "integer"
+      }
+    }
+  ]
+}

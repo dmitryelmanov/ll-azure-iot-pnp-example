@@ -1,0 +1,38 @@
+{
+  "@context": "dtmi:dtdl:context;2",
+  "@id": "dtmi:com:example:TemperatureSensor;1",
+  "@type": "Interface",
+  "displayName": "TemperatureSensor",
+  "description": "Reports current temperature in a provided range.",
+  "contents": [
+    {
+      "@type": [
+        "Telemetry",
+        "Temperature"
+      ],
+      "name": "temperature",
+      "schema": "double",
+      "unit": "degreeCelsius",
+      "displayName": "Temperature",
+      "description": "Temperature in degrees Celsius."
+    },
+    {
+      "@type": "Property",
+      "name": "targetTemperatureRange",
+      "schema": {
+        "@type": "Object",
+        "fields": [
+          {
+            "name": "min",
+            "schema": "double"
+          },
+          {
+            "name": "max",
+            "schema": "double"
+          }
+        ]
+      },
+      "writable": true
+    }
+  ]
+}

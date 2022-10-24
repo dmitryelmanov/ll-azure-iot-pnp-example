@@ -9,6 +9,19 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureIoTDevice", "AzureIoTD
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClimatePnPDevice", "ClimatePnPDevice\ClimatePnPDevice.csproj", "{F48A3E8D-3BCC-416B-B7FB-C937ADF70ADE}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Models", "Models", "{BB679B73-81CC-47D0-9C03-815093C00B4F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "dtmi", "dtmi", "{BB208F83-530B-4FCF-866F-A49B63633A35}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "com", "com", "{B22918E4-5F62-48AE-ABCF-CF227444CF1F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "example", "example", "{2524DA9C-8994-412A-9E2C-CD44E764E172}"
+	ProjectSection(SolutionItems) = preProject
+		Models\dtmi\com\example\climatedevice-1.json = Models\dtmi\com\example\climatedevice-1.json
+		Models\dtmi\com\example\humiditysensor-1.json = Models\dtmi\com\example\humiditysensor-1.json
+		Models\dtmi\com\example\temperaturesensor-1.json = Models\dtmi\com\example\temperaturesensor-1.json
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,6 +43,11 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{BB208F83-530B-4FCF-866F-A49B63633A35} = {BB679B73-81CC-47D0-9C03-815093C00B4F}
+		{B22918E4-5F62-48AE-ABCF-CF227444CF1F} = {BB208F83-530B-4FCF-866F-A49B63633A35}
+		{2524DA9C-8994-412A-9E2C-CD44E764E172} = {B22918E4-5F62-48AE-ABCF-CF227444CF1F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {25464BF0-1B38-49C3-93B4-26FE3827B33D}

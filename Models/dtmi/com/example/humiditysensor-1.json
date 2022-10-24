@@ -1,0 +1,38 @@
+{
+  "@context": "dtmi:dtdl:context;2",
+  "@id": "dtmi:com:example:HumiditySensor;1",
+  "@type": "Interface",
+  "displayName": "HumiditySensor",
+  "description": "Reports current humidity in a provided range.",
+  "contents": [
+    {
+      "@type": [
+        "Telemetry",
+        "RelativeHumidity"
+      ],
+      "name": "humidity",
+      "schema": "double",
+      "unit": "percent",
+      "displayName": "Humidity",
+      "description": "Humidity in percents."
+    },
+    {
+      "@type": "Property",
+      "name": "targetHumidityRange",
+      "schema": {
+        "@type": "Object",
+        "fields": [
+          {
+            "name": "min",
+            "schema": "double"
+          },
+          {
+            "name": "max",
+            "schema": "double"
+          }
+        ]
+      },
+      "writable": true
+    }
+  ]
+}
