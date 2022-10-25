@@ -5,9 +5,14 @@
  * This service receives notifications when a new devie has created, and,
  * if there is a tag 'edegeId', service will set that Edge device as a parent for created device.
  * Note: It only works with Provisioning Function as a Custom Allocation Policy in DPS.
+ * Also this service is creating Digital Twin for a new device, 
+ * and a relationship, if the device has a parent device (Edge device).
  */
 
 using System.Text;
+using Azure;
+using Azure.DigitalTwins.Core;
+using Azure.Identity;
 using Azure.Messaging.EventHubs.Consumer;
 using Microsoft.Azure.Devices;
 using Microsoft.Azure.Devices.Shared;
@@ -15,6 +20,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using ProvisioningService;
+using ProvisioningService.DigitalTwin;
 using Serilog;
 using Serilog.Extensions.Logging;
 
@@ -36,12 +42,16 @@ var logger = new SerilogLoggerFactory(Log.Logger)
     .CreateLogger("ClimateDevice");
 
 var hubOptions = config.GetSection("IoTHub").Get<IoTHubOptions>();
+var digitalTwinOptions = config.GetSection("DigitalTwin").Get<DigitalTwinOptions>();
 
 logger.LogInformation("Start provisioning service.");
 await using var consumerClient = new EventHubConsumerClient(
-    EventHubConsumerClient.DefaultConsumerGroupName,
+    hubOptions.ConsumerGroupName ?? EventHubConsumerClient.DefaultConsumerGroupName,
     hubOptions.EventHubConnectionString);
 using var registryManager = RegistryManager.CreateFromConnectionString(hubOptions.ConnectionString);
+
+var credentials = new DefaultAzureCredential();
+var digitalTwinsClient = new DigitalTwinsClient(new Uri(digitalTwinOptions.Uri), credentials);
 
 var cts = new CancellationTokenSource();
 Console.CancelKeyPress += (sender, eventArgs) =>
@@ -52,59 +62,136 @@ Console.CancelKeyPress += (sender, eventArgs) =>
 Console.WriteLine("Press Control+C to quit");
 
 logger.LogInformation("Listening for messages on all partitions.");
-await foreach (var partitionEvent in consumerClient.ReadEventsAsync(new ReadEventOptions
+try
 {
-    MaximumWaitTime = TimeSpan.FromMilliseconds(500),
-}))
-{
-    if (partitionEvent.Data != null)
+    await foreach (var partitionEvent in consumerClient.ReadEventsAsync(
+        new ReadEventOptions
+        {
+            MaximumWaitTime = TimeSpan.FromMilliseconds(500),
+        },
+        cts.Token))
     {
-        logger.LogInformation("Message received on partition {0}:", partitionEvent.Partition.PartitionId);
-
-        string data = Encoding.UTF8.GetString(partitionEvent.Data.Body.ToArray());
-        logger.LogTrace($"Data:\r\n\t{data}");
-
-        logger.LogDebug("Application properties:");
-        foreach (var prop in partitionEvent.Data.Properties)
+        if (partitionEvent.Data != null)
         {
-            logger.LogDebug("\t{0}: {1}", prop.Key, prop.Value);
-        }
+            logger.LogInformation("Message received on partition {0}:", partitionEvent.Partition.PartitionId);
 
-        logger.LogDebug("System properties:");
-        foreach (var prop in partitionEvent.Data.SystemProperties)
-        {
-            logger.LogDebug("\t{0}: {1}", prop.Key, prop.Value);
-        }
+            string data = Encoding.UTF8.GetString(partitionEvent.Data.Body.ToArray());
+            logger.LogTrace($"Data:\r\n\t{data}");
 
-        if (partitionEvent.Data.Properties.TryGetValue("iothub-message-schema", out var schema)
-            && schema.Equals("deviceLifecycleNotification")
-            && partitionEvent.Data.Properties.TryGetValue("opType", out var opType)
-            && opType.Equals("createDeviceIdentity"))
-        {
-            var deviceId = (string)partitionEvent.Data.Properties["deviceId"];
-            try
+            logger.LogDebug("Application properties:");
+            foreach (var prop in partitionEvent.Data.Properties)
             {
-                var twin = JsonConvert.DeserializeObject<Twin>(data);
-                logger.LogTrace($"Twin: {JsonConvert.SerializeObject(twin, Formatting.Indented)}");
+                logger.LogDebug("\t{0}: {1}", prop.Key, prop.Value);
+            }
 
-                if (twin!.Tags.Contains("edgeId") && !string.IsNullOrEmpty((string)twin!.Tags["edgeId"]))
+            logger.LogDebug("System properties:");
+            foreach (var prop in partitionEvent.Data.SystemProperties)
+            {
+                logger.LogDebug("\t{0}: {1}", prop.Key, prop.Value);
+            }
+
+            if (partitionEvent.Data.Properties.TryGetValue("iothub-message-schema", out var schema)
+                && schema.Equals("deviceLifecycleNotification")
+                && partitionEvent.Data.Properties.TryGetValue("opType", out var opType)
+                && opType.Equals("createDeviceIdentity"))
+            {
+                var deviceId = (string)partitionEvent.Data.Properties["deviceId"];
+                string? parentId = null;
+
+                var deviceTwin = JsonConvert.DeserializeObject<Twin>(data);
+                logger.LogTrace($"Twin: {JsonConvert.SerializeObject(deviceTwin, Formatting.Indented)}");
+
+                try
                 {
-                    var edgeId = (string)twin!.Tags["edgeId"];
-                    var edgeDevice = await registryManager.GetDeviceAsync(edgeId, cts.Token);
-                    if (edgeDevice != null)
+                    if (deviceTwin!.Tags.Contains("edgeId") && !string.IsNullOrEmpty((string)deviceTwin!.Tags["edgeId"]))
                     {
-                        var device = await registryManager.GetDeviceAsync(deviceId, cts.Token);
-                        device.Scope = edgeDevice.Scope;
-                        await registryManager.UpdateDeviceAsync(device, cts.Token);
+                        var edgeId = (string)deviceTwin!.Tags["edgeId"];
+                        var edgeDevice = await registryManager.GetDeviceAsync(edgeId, cts.Token);
+                        if (edgeDevice != null)
+                        {
+                            var device = await registryManager.GetDeviceAsync(deviceId, cts.Token);
+                            device.Scope = edgeDevice.Scope;
+                            await registryManager.UpdateDeviceAsync(device, cts.Token);
+                            parentId = edgeDevice.Id;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to set device's parent.");
+                    continue;
+                }
+
+                try 
+                {
+                    // Let's Create or Update Digital Twin for device
+                    var modelId = (string)deviceTwin!.Tags["modelId"];
+                    if (modelId != "dtmi:com:example:ClimateDevice;1")
+                    {
+                        logger.LogError($"Unknown model {modelId}");
+                        continue;
+                    }
+
+                    var initialDigitalTwin = new ClimateDeviceTwin
+                    {
+                        Temperature = new TemperatureSensorTwin
+                        {
+                            TargetTemperatureRange = new TargetRangeProperty
+                            {
+                                Min = deviceTwin.Properties.Desired["temperature"]["targetTemperatureRange"]["min"],
+                                Max = deviceTwin.Properties.Desired["temperature"]["targetTemperatureRange"]["max"],
+                            },
+                            Metadata = new TemperatureSensorMetadata(),
+                        },
+                        Humidity = new HumiditySensorTwin
+                        {
+                            TargetHumidityRange = new TargetRangeProperty
+                            {
+                                Min = deviceTwin.Properties.Desired["humidity"]["targetHumidityRange"]["min"],
+                                Max = deviceTwin.Properties.Desired["humidity"]["targetHumidityRange"]["max"],
+                            },
+                            Metadata = new HumiditySensorMetadata(),
+                        },
+                        TelemetryInterval = (int)deviceTwin.Properties.Desired["telemetryInterval"],
+                        Metadata = new ClimateDeviceMetadata
+                        {
+                            ModelId = modelId,
+                        }
+                    };
+
+                    var digitalTwin = await digitalTwinsClient
+                        .CreateOrReplaceDigitalTwinAsync(deviceId, initialDigitalTwin, cancellationToken: cts.Token);
+                    logger.LogInformation("Digital Twin created successfully.");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to create Digital Twin.");
+                    continue;
+                }
+
+                if (parentId != null)
+                {
+                    var relationship = new BasicRelationship
+                    {
+                        TargetId = deviceId,
+                        Name = "provides",
+                    };
+
+                    try
+                    {
+                        string relId = $"{parentId}-{relationship.Name}->{deviceId}";
+                        await digitalTwinsClient.CreateOrReplaceRelationshipAsync(parentId, relId, relationship);
+                        logger.LogInformation("Relationship created successfully.");
+                    }
+                    catch (RequestFailedException ex)
+                    {
+                        logger.LogError(ex, $"Create relationship error: {ex.Status}: {ex.Message}");
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to get Device Twin.");
-            }
         }
-    }
 
-    if (cts.IsCancellationRequested) break;
+        if (cts.IsCancellationRequested) break;
+    }
 }
+catch (OperationCanceledException) { }

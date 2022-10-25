@@ -1,0 +1,17 @@
+{
+  "@context": "dtmi:dtdl:context;2",
+  "@id": "dtmi:com:example:EdgeDevice;1",
+  "@type": "Interface",
+  "displayName": "EdgeDevice",
+  "contents": [
+    {
+      "@type": "Property",
+      "name": "name",
+      "schema": "string"
+    },
+    {
+      "@type": "Relationship",
+      "name": "provides"
+    }
+  ]
+}

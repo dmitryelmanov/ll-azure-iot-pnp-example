@@ -21,6 +21,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "example", "example", "{2524DA9C-8994-412A-9E2C-CD44E764E172}"
 	ProjectSection(SolutionItems) = preProject
 		Models\dtmi\com\example\climatedevice-1.json = Models\dtmi\com\example\climatedevice-1.json
+		Models\dtmi\com\example\edgedevice-1.json = Models\dtmi\com\example\edgedevice-1.json
 		Models\dtmi\com\example\humiditysensor-1.json = Models\dtmi\com\example\humiditysensor-1.json
 		Models\dtmi\com\example\temperaturesensor-1.json = Models\dtmi\com\example\temperaturesensor-1.json
 	EndProjectSection
