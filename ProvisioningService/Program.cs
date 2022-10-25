@@ -1,4 +1,13 @@
-﻿using System.Text;
+﻿/*
+ * Azure DPS is not able to provision a downstream device (device that connects to IoT Hub trough Edge device).
+ * To be specific, it can't set a parent for a downstream device.
+ * This service designed as a workaround for that issue.
+ * This service receives notifications when a new devie has created, and,
+ * if there is a tag 'edegeId', service will set that Edge device as a parent for created device.
+ * Note: It only works with Provisioning Function as a Custom Allocation Policy in DPS.
+ */
+
+using System.Text;
 using Azure.Messaging.EventHubs.Consumer;
 using Microsoft.Azure.Devices;
 using Microsoft.Azure.Devices.Shared;
