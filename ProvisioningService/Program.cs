@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Azure.Messaging.EventHubs.Consumer;
 using Microsoft.Azure.Devices;
+using Microsoft.Azure.Devices.Shared;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -74,8 +75,20 @@ await foreach (var partitionEvent in consumerClient.ReadEventsAsync(new ReadEven
             var deviceId = (string)partitionEvent.Data.Properties["deviceId"];
             try
             {
-                var twin = await registryManager.GetTwinAsync(deviceId);
+                var twin = JsonConvert.DeserializeObject<Twin>(data);
                 logger.LogTrace($"Twin: {JsonConvert.SerializeObject(twin, Formatting.Indented)}");
+
+                if (twin!.Tags.Contains("edgeId") && !string.IsNullOrEmpty((string)twin!.Tags["edgeId"]))
+                {
+                    var edgeId = (string)twin!.Tags["edgeId"];
+                    var edgeDevice = await registryManager.GetDeviceAsync(edgeId, cts.Token);
+                    if (edgeDevice != null)
+                    {
+                        var device = await registryManager.GetDeviceAsync(deviceId, cts.Token);
+                        device.Scope = edgeDevice.Scope;
+                        await registryManager.UpdateDeviceAsync(device, cts.Token);
+                    }
+                }
             }
             catch (Exception ex)
             {
