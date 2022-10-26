@@ -10,6 +10,7 @@ namespace ClimateModule
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Client;
     using Microsoft.Azure.Devices.Client.Transport.Mqtt;
+    using Newtonsoft.Json;
 
     class Program
     {
@@ -75,18 +76,38 @@ namespace ClimateModule
 
             if (!string.IsNullOrEmpty(messageString))
             {
-                using (var pipeMessage = new Message(messageBytes))
+                var telemetry = JsonConvert.DeserializeAnonymousType(messageString, new
+                {
+                    Temperature = new CanonicalTelemetry(),
+                    Humidity = new CanonicalTelemetry(),
+                });
+
+                var updatedTelemetry = new
+                {
+                    Temperature = telemetry.Temperature,
+                    Humidity = telemetry.Humidity,
+                    Status = GetClimateStatus(telemetry.Temperature.Value, telemetry.Humidity.Value),
+                };
+
+                var updatedMessageString = JsonConvert.SerializeObject(updatedTelemetry);
+
+                using (var pipeMessage = new Message(Encoding.UTF8.GetBytes(updatedMessageString)))
                 {
                     foreach (var prop in message.Properties)
                     {
                         pipeMessage.Properties.Add(prop.Key, prop.Value);
                     }
                     await moduleClient.SendEventAsync("output1", pipeMessage);
-                
+
                     Console.WriteLine("Received message sent");
                 }
             }
             return MessageResponse.Completed;
         }
+
+        private static ClimateStatus GetClimateStatus(double temperature, double humidity)
+            => temperature > 18 && temperature < 27 && humidity > 40 && humidity < 60
+            ? ClimateStatus.Healthy
+            : ClimateStatus.Unhealthy;
     }
 }
