@@ -5,6 +5,10 @@ using Serilog;
 using System.Text;
 using TelemetryService;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Common;
+using Microsoft.Azure.Devices;
+using Microsoft.Azure.Devices.Shared;
 
 const string ENV_PREFIX = "IOT_TELEMETRY_SERVICE_";
 
@@ -29,6 +33,7 @@ logger.LogInformation("Start provisioning service.");
 await using var consumerClient = new EventHubConsumerClient(
     hubOptions.ConsumerGroupName ?? EventHubConsumerClient.DefaultConsumerGroupName,
     hubOptions.EventHubConnectionString);
+using var registryManager = RegistryManager.CreateFromConnectionString(hubOptions.ConnectionString);
 
 var cts = new CancellationTokenSource();
 Console.CancelKeyPress += (sender, eventArgs) =>
@@ -67,6 +72,27 @@ try
             logger.LogTrace($"Data:\r\n\t{data}");
 
             // TODO: Store data anywhere, or send it somewhere, or do whatever you want.
+
+
+            // Here we are checking values and changing A/C status
+            var telemetry = JsonConvert.DeserializeAnonymousType(data, new
+            {
+                Temperature = new CanonicalTelemetry(),
+                Humidity = new CanonicalTelemetry(),
+                Status = ClimateStatus.Healthy,
+            });
+
+            var targetAcStatus = telemetry!.Status == ClimateStatus.Unhealthy ? AcStatus.On : AcStatus.Off;
+            var twin = await registryManager!.GetTwinAsync(deviceId);
+            if (Enum.TryParse<AcStatus>(twin!.Properties.Reported["acStatus"], out AcStatus acStatus)
+                && acStatus != targetAcStatus)
+            {
+                logger.LogInformation($"Changing A/C status to {targetAcStatus}.");
+
+                var twinPatch = new Twin();
+                twinPatch.Properties.Desired["acStatus"] = targetAcStatus.ToString();
+                await registryManager.UpdateTwinAsync(deviceId, twinPatch, twin!.ETag);
+            }
         }
 
         if (cts.IsCancellationRequested) break;

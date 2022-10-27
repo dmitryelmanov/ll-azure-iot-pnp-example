@@ -28,6 +28,15 @@
       "writable": true
     },
     {
+      "@type": [
+        "Property"
+      ],
+      "name": "acStatus",
+      "schema": "string",
+      "displayName": "A/C Status",
+      "writable": true
+    },
+    {
       "@type": "Command",
       "name": "reboot",
       "request": {

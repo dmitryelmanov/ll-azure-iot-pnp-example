@@ -15,7 +15,8 @@
                     "max": 100
                 }
             },
-            "telemetryInterval": 3000
+            "telemetryInterval": 3000,
+            "acStatus": "Off"
         },
         "reported": {
             "temperature": {
@@ -32,7 +33,8 @@
                     "max": 100
                 }
             },
-            "telemetryInterval": 3000
+            "telemetryInterval": 3000,
+            "acStatus": "Off"
         }
     }
 }

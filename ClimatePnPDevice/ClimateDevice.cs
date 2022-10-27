@@ -33,6 +33,7 @@ public sealed class ClimateDevice
     }
 
     public TimeSpan TelemetryInterval { get; set; } = TimeSpan.FromSeconds(3);
+    public AcStatus AcStatus { get; set; } = AcStatus.Off;
 
     public async Task ExecAsync(CancellationToken cancellationToken)
     {
@@ -69,6 +70,16 @@ public sealed class ClimateDevice
                     _humiditySource.Min = Convert.ToDouble(value.targetHumidityRange.min);
                     _humiditySource.Max = Convert.ToDouble(value.targetHumidityRange.max);
                     return Task.FromResult<dynamic>(value);
+                }
+            },
+            {
+                "acStatus",
+                (value, cancellationToken) =>
+                {
+                    _logger?.LogTrace($"A/C Status: {value}");
+                    AcStatus = Enum.Parse<AcStatus>(value);
+                    _logger?.LogWarning($"A/C is turned {AcStatus}.");
+                    return Task.FromResult<dynamic>(AcStatus.ToString());
                 }
             }
         };
